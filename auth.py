@@ -3,7 +3,7 @@
 auth.py - IBM Cloud IAM token retrieval.
 
 Fetches a short-lived Bearer token from the IBM IAM endpoint using the
-API key stored in the environment / .env file.
+API key stored in st.secrets (Streamlit Cloud) or the .env file (local).
 """
 
 import os
@@ -13,7 +13,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 IAM_TOKEN_URL = "https://iam.cloud.ibm.com/identity/token"
-_API_KEY = os.getenv("IAM_API_KEY", "")
+
+
+def _get_api_key() -> str:
+    """Read IAM_API_KEY from st.secrets (Streamlit Cloud) or os.environ (.env)."""
+    try:
+        import streamlit as st
+        return st.secrets.get("IAM_API_KEY", "") or os.getenv("IAM_API_KEY", "")
+    except Exception:
+        return os.getenv("IAM_API_KEY", "")
 
 
 def get_iam_token(api_key: str = "") -> str:
@@ -36,10 +44,10 @@ def get_iam_token(api_key: str = "") -> str:
         If the IAM endpoint returns a non-200 status or the response does
         not contain an access_token field.
     """
-    key = api_key or _API_KEY
+    key = api_key or _get_api_key()
     if not key:
         raise RuntimeError(
-            "IAM_API_KEY is not set. Add it to your .env file or environment."
+            "IAM_API_KEY is not set. Add it to your .env file or Streamlit secrets."
         )
 
     payload = {

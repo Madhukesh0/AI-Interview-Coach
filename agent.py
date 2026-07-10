@@ -16,9 +16,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-INSTANCE_URL   = os.getenv("INSTANCE_URL",   "")
-AGENT_ID       = os.getenv("AGENT_ID",       "")
-ENVIRONMENT_ID = os.getenv("ENVIRONMENT_ID", "")
+
+def _get_secret(key: str) -> str:
+    """Read a secret from st.secrets (Streamlit Cloud) or os.environ (.env)."""
+    try:
+        import streamlit as st
+        return st.secrets.get(key, "") or os.getenv(key, "")
+    except Exception:
+        return os.getenv(key, "")
+
+
+def _instance_url()   -> str: return _get_secret("INSTANCE_URL")
+def _agent_id()       -> str: return _get_secret("AGENT_ID")
+def _environment_id() -> str: return _get_secret("ENVIRONMENT_ID")
 
 _RUNS_ENDPOINT = (
     "{base}/v1/orchestrate/runs"
@@ -228,15 +238,15 @@ def chat_with_agent(
         ``(reply_text, thread_id)`` – thread_id may be a newly generated
         UUID if the server did not return one.
     """
-    url = _RUNS_ENDPOINT.format(base=INSTANCE_URL.rstrip("/"))
+    url = _RUNS_ENDPOINT.format(base=_instance_url().rstrip("/"))
 
     payload: dict = {
         "message": {
             "role":    "user",
             "content": user_message,
         },
-        "agent_id":       AGENT_ID,
-        "environment_id": ENVIRONMENT_ID,
+        "agent_id":       _agent_id(),
+        "environment_id": _environment_id(),
     }
 
     # Include thread_id to maintain conversation history when provided
